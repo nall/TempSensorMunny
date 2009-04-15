@@ -14,10 +14,22 @@
 #                is connected.
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
+#############################
+# Begin configuration section
+#
 DEVICE     = attiny13
 CLOCK      = 4800000
+ONEWIRE_USE_MACROS = 1
+ONEWIRE_PORTIN = PINB
+ONEWIRE_PORT = PORTB
+ONEWIRE_IO_CTL = DDRB
+ONEWIRE_PIN = 0
+#
+# End configuration section
+#############################
+
 PROGRAMMER = -c stk500v2 -P /dev/tty.usbmodem1d11
-OBJECTS    = main.o DS18B20.o OneWire.o
+OBJECTS    = main.o OneWire/lib1wire.a
 FUSES      = -U hfuse:w:0xff:m -U lfuse:w:0x69:m
 # ATTiny13 fuse bits (fuse bits for other devices are different!):
 #
@@ -62,7 +74,15 @@ FUSES      = -U hfuse:w:0xff:m -U lfuse:w:0x69:m
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -g -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+COMPILE = avr-gcc -std=c99 -g -Wall -Os \
+    -IOneWire \
+	-DF_CPU=$(CLOCK) \
+	-mmcu=$(DEVICE) \
+    -DONEWIRE_USE_MACROS=$(ONEWIRE_USE_MACROS) \
+	-DONEWIRE_PORTIN=$(ONEWIRE_PORTIN) \
+	-DONEWIRE_PORT=$(ONEWIRE_PORT) \
+	-DONEWIRE_IO_CTL=$(ONEWIRE_IO_CTL) \
+	-DONEWIRE_PIN=$(ONEWIRE_PIN)
 
 # symbolic targets:
 all:	main.hex
@@ -80,6 +100,15 @@ all:	main.hex
 .c.s:
 	$(COMPILE) -S $< -o $@
 
+OneWire/lib1wire.a:
+	make -C OneWire ONEWIRE_USE_MACROS=$(ONEWIRE_USE_MACROS) \
+        ONEWIRE_PORTIN=$(ONEWIRE_PORTIN)\
+        ONEWIRE_PORT=$(ONEWIRE_PORT)\
+        ONEWIRE_IO_CTL=$(ONEWIRE_IO_CTL)\
+        ONEWIRE_PIN=$(ONEWIRE_PIN)\
+        CLOCK=$(CLOCK)\
+        DEVICE=$(DEVICE)
+
 flash:	all
 	$(AVRDUDE) -U flash:w:main.hex:i
 
@@ -94,6 +123,7 @@ load: all
 	bootloadHID main.hex
 
 clean:
+	make -C OneWire clean
 	rm -f main.hex main.elf main.bin $(OBJECTS)
 
 # file targets:
