@@ -1,3 +1,12 @@
 This project is based on this project: http://bitsnbikes.blogspot.com/2009/02/munny-diy-valentines-gift.html
 
 I thought it was a really great idea and it was fun to make.
+
+Parts List:
+
+1 Maxim DS18B20 Temp Sensor: http://www.sparkfun.com/commerce/product_info.php?products_id=245
+1 Atmel Tiny13A: http://www.sparkfun.com/commerce/product_info.php?products_id=211
+1 RGB LED: http://www.sparkfun.com/commerce/product_info.php?products_id=105
+3 320 Ohm resistors
+1 4.7k Ohm resistor
+1 6-pin 0.1" header
