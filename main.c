@@ -44,6 +44,7 @@ static void update_leds(const uint8_t temp);
 
 volatile uint8_t blink_led = 0;
 volatile uint8_t led_value = 0;
+uint8_t error;
 
 #define IOCLK_IN_MS_AFTER_PRESCALING 27 // Why is this 55 / 2? 
 #define TEMP_DELAY_IN_MS (5000) // Every 5 seconds
@@ -51,24 +52,19 @@ volatile uint8_t led_value = 0;
 
 ISR(TIM0_OVF_vect)
 {
-    static uint32_t temp_count = 0;
-    static int8_t last_temp = 0x80;
+    static uint16_t temp_count = 0;
 
     if(temp_count == 0)
     {
         int16_t full_temp = 0;
-        uint8_t error = 0;
         ds18b20_read_temperature(full_temp, error);
         if(error == EXIT_FAILURE)
         {
             show_error();
         }
-        int8_t cur_temp = (full_temp >> 4);
-        update_leds(cur_temp);
+        update_leds(full_temp >> 4);
 
         blink_led = 1;
-
-        last_temp = cur_temp;
     }
 
     // This routine gets called about once every 0.4ms
@@ -80,7 +76,7 @@ ISR(TIM0_OVF_vect)
     }
 }
 
-static void show_error() // Blink red quickly
+static inline void show_error() // Blink red quickly
 {
     PORTB &= ~0x1C;
     PORTB |= RED_BITS;
