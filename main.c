@@ -39,42 +39,11 @@
 #define LED_CYAN   6
 #define LED_WHITE  7
 
-static void show_error();
-static void update_leds(const uint8_t temp);
-
-volatile uint8_t blink_led = 0;
-volatile uint8_t led_value = 0;
 uint8_t error;
+static void show_error();
 
 #define IOCLK_IN_MS_AFTER_PRESCALING 27 // Why is this 55 / 2? 
 #define TEMP_DELAY_IN_MS (5000) // Every 5 seconds
-
-
-ISR(TIM0_OVF_vect)
-{
-    static uint16_t temp_count = 0;
-
-    if(temp_count == 0)
-    {
-        int16_t full_temp = 0;
-        ds18b20_read_temperature(full_temp, error);
-        if(error == EXIT_FAILURE)
-        {
-            show_error();
-        }
-        update_leds(full_temp >> 4);
-
-        blink_led = 1;
-    }
-
-    // This routine gets called about once every 0.4ms
-    // This routine gets called around once every 13.56ms
-    temp_count += IOCLK_IN_MS_AFTER_PRESCALING;
-    if(temp_count >= TEMP_DELAY_IN_MS)
-    {
-        temp_count = 0;
-    }
-}
 
 static inline void show_error() // Blink red quickly
 {
@@ -89,8 +58,9 @@ static inline void show_error() // Blink red quickly
     }
 }
 
-static void update_leds(const uint8_t temperature)
+static inline uint8_t update_leds(const int8_t temperature)
 {
+    uint8_t led_value;
     if(temperature < 19)
     {
         led_value = LED_BLUE;
@@ -117,6 +87,8 @@ static void update_leds(const uint8_t temperature)
     }
 
     led_value <<= 2;
+
+    return led_value;
 }
 
 int main(void)
@@ -138,8 +110,7 @@ int main(void)
 
     // Set the resolution to 9 bits and store it in EEPROM
     {
-        uint8_t error = 0;
-        ds18b20_set_resolution(DS18B20_9BIT_RESOLUTION, 1, error);
+        //ds18b20_set_resolution(DS18B20_9BIT_RESOLUTION, 1, error);
         if(error == EXIT_FAILURE)
         {
             show_error();
@@ -147,6 +118,7 @@ int main(void)
     }
 
 
+    if(0)
     {
         GTCCR = _BV(TSM) | _BV(PSR10);
 
@@ -164,18 +136,19 @@ int main(void)
 
     while(1)
     {
-        // Sleep until it's time to change the temp
-        while(blink_led == 0)
+        int16_t full_temp = 0;
+        ds18b20_read_temperature(full_temp, error);
+        if(error == EXIT_FAILURE)
         {
-            set_sleep_mode(SLEEP_MODE_IDLE);
-            sleep_mode();
+            show_error();
         }
+        int8_t value = full_temp >> 4;
+        uint8_t led_value = update_leds(value);
 
         PORTB &= ~0x1C;
         PORTB |= led_value;
 
-        TCNT0 = 0;
-        blink_led = 0;
+        _delay_ms(1000);
     }
 
     return 0;   /* never reached */
